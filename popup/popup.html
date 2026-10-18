@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crawler RPC</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <!-- 顶栏：品牌名称与副标 + 实时状态 -->
+    <header class="header">
+      <div class="header-brand">
+        <div class="header-brand-row">
+          <h1><span>🕷️</span> Crawler RPC</h1>
+          <span class="version-badge">v3.0</span>
+        </div>
+        <span class="header-subtitle">浏览器插件自动化控制中心</span>
+      </div>
+      <div class="header-status">
+        <div class="status-indicator">
+          <div id="statusDot" class="status-dot loading"></div>
+          <span id="statusText" class="status-text">检测中...</span>
+        </div>
+        <div id="platformTag" class="platform-tag" style="display:none;">
+          <span id="platformIcon"></span>
+          <span id="platformName"></span>
+        </div>
+      </div>
+    </header>
+
+    <!-- 主体容器 -->
+    <main class="container">
+      <!-- 快捷平台跳转区 -->
+      <section class="card platform-selector-card">
+        <div class="selector-header">
+          <label class="section-label" style="margin-bottom:0;">🌐 目标平台导航</label>
+          <span class="platform-total-badge" id="platformTotalBadge">共 78 平台</span>
+        </div>
+
+        <!-- 常用推荐快速胶囊 -->
+        <div class="quick-favorites">
+          <span class="quick-label">常用:</span>
+          <div class="quick-chips" id="quickChips">
+            <button type="button" class="quick-chip" data-platform-id="xhs"><span>📕</span> 小红书</button>
+            <button type="button" class="quick-chip" data-platform-id="zhipin"><span>💼</span> Boss直聘</button>
+            <button type="button" class="quick-chip" data-platform-id="douyin"><span>🎵</span> 抖音</button>
+            <button type="button" class="quick-chip" data-platform-id="weibo"><span>📣</span> 微博</button>
+            <button type="button" class="quick-chip" data-platform-id="bilibili"><span>📺</span> B站</button>
+            <button type="button" class="quick-chip" data-platform-id="chatgpt"><span>🤖</span> ChatGPT</button>
+          </div>
+        </div>
+
+        <!-- 下拉选择与操作栏 -->
+        <div class="dropdown-action-bar">
+          <div class="custom-select-wrapper" id="customSelectWrapper">
+            <button type="button" class="select-trigger" id="selectTrigger">
+              <span id="selectedPlatformText"><span>🔍</span> 选择或搜索平台 (78 个)...</span>
+              <span class="dropdown-arrow">▼</span>
+            </button>
+
+            <!-- 展开的下拉浮层 -->
+            <div class="dropdown-menu" id="dropdownMenu" style="display:none;">
+              <div class="dropdown-search-box">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="dropdownSearchInput" class="search-input" placeholder="输入名称、ID 或域名筛选..." autocomplete="off">
+                <button type="button" id="clearDropdownSearchBtn" class="clear-search-btn" style="display:none;">✕</button>
+              </div>
+
+              <!-- 分类筛选 Chips -->
+              <div class="dropdown-category-filters" id="categoryFilters">
+                <button type="button" class="category-chip active" data-category="all">全部</button>
+                <button type="button" class="category-chip" data-category="social">社交</button>
+                <button type="button" class="category-chip" data-category="media">音视频</button>
+                <button type="button" class="category-chip" data-category="work">招聘</button>
+                <button type="button" class="category-chip" data-category="ai">AI</button>
+              </div>
+
+              <!-- 下拉平台列表（兼容 unit test 中的 #platformGrid 选择器） -->
+              <div class="platform-list-container" id="platformGrid"></div>
+
+              <div id="noPlatformResult" class="empty-state" style="display:none;">
+                <span class="empty-icon">🔍</span>
+                <p>未找到匹配平台</p>
+              </div>
+            </div>
+          </div>
+
+          <button type="button" id="openBtn" class="btn btn-secondary action-btn"><span>🚀</span> 前往</button>
+          <button type="button" id="refreshBtn" class="btn btn-outline action-btn" title="刷新当前页面"><span>🔄</span> 刷新</button>
+        </div>
+      </section>
+
+      <!-- 配置项区域 -->
+      <section class="card">
+        <label class="section-label">🔗 RPC 服务地址</label>
+        <div class="input-wrapper">
+          <input type="text" id="wsHostInput" class="text-input" placeholder="ws://127.0.0.1:5612">
+          <button type="button" id="saveConfigBtn" class="btn btn-primary">保存</button>
+        </div>
+        <p class="hint-text">保存后由后台应用，不会在保存时验证连接</p>
+        <label class="input-label" for="rpcTokenInput">令牌（预留，当前不生效）</label>
+        <input id="rpcTokenInput" class="text-input" type="password" autocomplete="off" placeholder="可留空">
+        <p class="hint-text">仅保存到扩展本地存储，本版本不会发送或启用鉴权。</p>
+      </section>
+
+      <section class="card">
+        <label class="section-label">⏱️ 操作延迟配置</label>
+        <div class="delay-info">
+          <span class="delay-label">模拟人工操作间隔</span>
+          <div class="delay-value-display">
+            <input type="number" id="delayNumberInput" class="delay-input" value="0">
+            <small>ms</small>
+          </div>
+        </div>
+        <input type="range" id="actionDelaySlider" min="0" max="5000" step="100" value="0">
+        <div class="preset-grid">
+          <button type="button" class="delay-preset-btn preset-btn active" data-value="0">极速</button>
+          <button type="button" class="delay-preset-btn preset-btn" data-value="500">快</button>
+          <button type="button" class="delay-preset-btn preset-btn" data-value="1000">默认</button>
+          <button type="button" class="delay-preset-btn preset-btn" data-value="3000">慢</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <label class="section-label">🛡️ Cloudflare 自动绕过</label>
+        <div class="delay-info">
+          <span class="delay-label">启用后发现CF验证页自动点击绕过</span>
+          <label class="switch">
+            <input type="checkbox" id="cfAutopilotToggle">
+            <span class="slider-switch"></span>
+          </label>
+        </div>
+        <p class="hint-text">修改后实时同步到当前标签页的触发器</p>
+        <div class="input-wrapper" style="margin-top:8px;">
+          <input type="text" id="cfWhitelistInput" class="text-input" placeholder="域名白名单,逗号分隔,空为全部">
+        </div>
+      </section>
+
+      <footer class="footer-info">
+        <span class="hint-text">Crawler RPC Controller v3.0.0</span>
+      </footer>
+    </main>
+
+    <div id="toastNotification" class="toast" style="display:none;"></div>
+  </div>
+
+  <script src="platforms.generated.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
